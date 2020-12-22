@@ -1,0 +1,5 @@
+#Massive speed & jump upgrade.
+useUltraNimbleFeet: true
+useMaxRangeEchoOfHero: true
+#Massive recovery amounts overtime.
+useUltraRecovery: true
