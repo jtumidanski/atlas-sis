@@ -13,7 +13,7 @@ COPY sis-api/src sis-api/src
 COPY sis-model/src sis-model/src
 COPY sis-base/src sis-base/src
 
-RUN mvn install
+RUN mvn install -Prunnable
 
 FROM openjdk:14-ea-jdk-alpine
 USER root
