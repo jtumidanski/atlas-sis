@@ -13,7 +13,7 @@ import (
 )
 
 func Read(skillId uint32) (*Model, error) {
-	i, err := findItem(skillId)
+	i, err := findSkill(skillId)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func Read(skillId uint32) (*Model, error) {
 	return getSkillFromXML(skillId, exml)
 }
 
-func findItem(skillId uint32) (*wz.FileEntry, error) {
+func findSkill(skillId uint32) (*wz.FileEntry, error) {
 	path := fmt.Sprintf("%07d", skillId)
 	if val, ok := wz.GetFileCache().GetFile(path[:len(path)-4] + ".img.xml"); ok == nil {
 		return val, nil
