@@ -2,48 +2,67 @@ package skill
 
 import (
 	"atlas-sis/json"
+	"atlas-sis/rest"
 	"github.com/gorilla/mux"
+	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 )
 
-func HandleGetSkillRequest(l logrus.FieldLogger) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		skillId, err := strconv.Atoi(vars["skillId"])
-		if err != nil {
-			l.WithError(err).Errorf("Error parsing skillId as uint32")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+const (
+	GetSkill = "get_skill"
+)
 
-		s, err := GetRegistry().GetSkill(uint32(skillId))
-		if err != nil {
-			l.WithError(err).Debugf("Unable to locate skill %d.", skillId)
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
+func InitResource(router *mux.Router, l logrus.FieldLogger) {
+	sr := router.PathPrefix("/skills").Subrouter()
+	sr.HandleFunc("/{skillId}", registerGetSkill(l)).Methods(http.MethodGet)
+}
 
-		result := dataContainer{
-			Data: dataBody{
-				Id:   strconv.Itoa(int(s.Id())),
-				Type: "",
-				Attributes: attributes{
-					Action:        s.Action(),
-					Element:       s.Element(),
-					AnimationTime: s.AnimationTime(),
-					Effects:       makeEffects(s.Effects()),
+func registerGetSkill(l logrus.FieldLogger) http.HandlerFunc {
+	return rest.RetrieveSpan(GetSkill, func(span opentracing.Span) http.HandlerFunc {
+		return handleGetSkill(l)(span)
+	})
+}
+
+func handleGetSkill(l logrus.FieldLogger) func(span opentracing.Span) http.HandlerFunc {
+	return func(span opentracing.Span) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			vars := mux.Vars(r)
+			skillId, err := strconv.Atoi(vars["skillId"])
+			if err != nil {
+				l.WithError(err).Errorf("Error parsing skillId as uint32")
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			s, err := GetRegistry().GetSkill(uint32(skillId))
+			if err != nil {
+				l.WithError(err).Debugf("Unable to locate skill %d.", skillId)
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			result := dataContainer{
+				Data: dataBody{
+					Id:   strconv.Itoa(int(s.Id())),
+					Type: "",
+					Attributes: attributes{
+						Action:        s.Action(),
+						Element:       s.Element(),
+						AnimationTime: s.AnimationTime(),
+						Effects:       makeEffects(s.Effects()),
+					},
 				},
-			},
-		}
+			}
 
-		w.WriteHeader(http.StatusOK)
-		err = json.ToJSON(result, w)
-		if err != nil {
-			l.WithError(err).Errorf("Writing response.")
+			w.WriteHeader(http.StatusOK)
+			err = json.ToJSON(result, w)
+			if err != nil {
+				l.WithError(err).Errorf("Writing response.")
+			}
+			return
 		}
-		return
 	}
 }
 

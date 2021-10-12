@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"atlas-sis/skill"
 	"context"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -9,17 +8,21 @@ import (
 	"sync"
 )
 
-func CreateRestService(l *logrus.Logger, ctx context.Context, wg *sync.WaitGroup) {
-	go NewServer(l, ctx, wg, ProduceRoutes())
+type RouteInitializer func(*mux.Router, logrus.FieldLogger)
+
+func CreateService(l *logrus.Logger, ctx context.Context, wg *sync.WaitGroup, basePath string, initializers ...RouteInitializer) {
+	go NewServer(l, ctx, wg, ProduceRoutes(basePath, initializers...))
 }
 
-func ProduceRoutes() func(l logrus.FieldLogger) http.Handler {
+func ProduceRoutes(basePath string, initializers ...RouteInitializer) func(l logrus.FieldLogger) http.Handler {
 	return func(l logrus.FieldLogger) http.Handler {
-		router := mux.NewRouter().PathPrefix("/ms/sis").Subrouter().StrictSlash(true)
+		router := mux.NewRouter().PathPrefix(basePath).Subrouter().StrictSlash(true)
 		router.Use(CommonHeader)
 
-		sr := router.PathPrefix("/skills").Subrouter()
-		sr.HandleFunc("/{skillId}", skill.HandleGetSkillRequest(l)).Methods(http.MethodGet)
+		for _, initializer := range initializers {
+			initializer(router, l)
+		}
+
 		return router
 	}
 }
